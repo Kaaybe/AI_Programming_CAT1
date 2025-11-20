@@ -1,0 +1,241 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyMqM5CTQgvkkMA+bPy4bMtI",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/Kaaybe/AI_Programming_CAT1/blob/main/AI%20Chatbot\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import re\n",
+        "import random\n",
+        "from datetime import datetime, timedelta"
+      ],
+      "metadata": {
+        "id": "KrXZ5451ZnRq"
+      },
+      "execution_count": 1,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "INTENTS = {\n",
+        "    \"greeting\": {\n",
+        "        \"patterns\": [r\"\\bhi\\b\", r\"\\bhello\\b\", r\"\\bhey\\b\", r\"\\bgreetings\\b\"],\n",
+        "        \"responses\": [\n",
+        "            \"Hello! 👋 How can I help you with the AI course or university info today?\",\n",
+        "            \"Hi there! What would you like to know about the course or campus?\"\n",
+        "        ]\n",
+        "    },\n",
+        "    \"goodbye\": {\n",
+        "        \"patterns\": [r\"\\bbye\\b\", r\"\\bgoodbye\\b\", r\"\\bsee you\\b\", r\"\\bexit\\b\", r\"\\bquit\\b\"],\n",
+        "        \"responses\": [\n",
+        "            \"Goodbye — wish you a great day! If you need anything else, just ask.\",\n",
+        "            \"See you! Good luck with your studies.\"\n",
+        "        ]\n",
+        "    },\n",
+        "    \"help\": {\n",
+        "        \"patterns\": [r\"\\bhelp\\b\", r\"\\bwhat can you do\\b\", r\"\\bcommands\\b\"],\n",
+        "        \"responses\": [\n",
+        "            \"I can answer FAQs about the AI course, office hours, assignments, syllabus, prerequisites, and campus resources. Try asking: 'When is the assignment due?' or 'What are the course prerequisites?'\"\n",
+        "        ]\n",
+        "    },\n",
+        "    \"course_info\": {\n",
+        "        \"patterns\": [r\"\\b(ai )?course\\b\", r\"\\babout the course\\b\", r\"\\bwhat is the course\\b\"],\n",
+        "        \"responses\": [\n",
+        "            \"This AI course covers basics of machine learning, neural networks, data preprocessing, and ethics. It's structured with weekly lectures, labs, and a final project.\",\n",
+        "            \"The course includes lectures, weekly assignments, lab sessions, and a final project focusing on a practical ML problem.\"\n",
+        "        ]\n",
+        "    },\n",
+        "    \"syllabus\": {\n",
+        "        \"patterns\": [r\"\\bsyllabus\\b\", r\"\\btopics\\b\", r\"\\bcourse topics\\b\"],\n",
+        "        \"responses\": [\n",
+        "            \"Key topics: 1) Python & data handling 2) Supervised learning (Regression & Classification) 3) Unsupervised learning 4) Neural networks 5) Ethics & deployment. Would you like a weekly breakdown?\"\n",
+        "        ]\n",
+        "    },\n",
+        "    \"assignment_deadline\": {\n",
+        "        \"patterns\": [r\"\\bassignment\\b.*\\bdue\\b\", r\"\\bdue date\\b\", r\"\\bdeadline\\b\"],\n",
+        "        \"responses\": [\n",
+        "            # We'll generate a polite informative response below dynamically\n",
+        "        ]\n",
+        "    },\n",
+        "    \"office_hours\": {\n",
+        "        \"patterns\": [r\"\\boffice hours\\b\", r\"\\btutor\\b\", r\"\\binstructor\\b\", r\"\\bprofessor\\b\"],\n",
+        "        \"responses\": [\n",
+        "            \"Instructor office hours are Mondays 2–4pm and Thursdays 10–11am in Room 204 (or online via Zoom). Would you like the Zoom link format?\"\n",
+        "        ]\n",
+        "    },\n",
+        "    \"prerequisites\": {\n",
+        "        \"patterns\": [r\"\\bprereq\", r\"\\bprerequisite\", r\"\\bneed to know\\b\", r\"\\bbackground\\b\"],\n",
+        "        \"responses\": [\n",
+        "            \"Recommended: basic Python, calculus (derivatives), and basic probability. If you're missing any of these, there are bridge materials available.\"\n",
+        "        ]\n",
+        "    },\n",
+        "    \"campus_resources\": {\n",
+        "        \"patterns\": [r\"\\blibrary\\b\", r\"\\bcampus resources\\b\", r\"\\bcounsel(ing|or)\\b\", r\"\\blabs\\b\"],\n",
+        "        \"responses\": [\n",
+        "            \"Campus resources include the main library (open 8am–8pm), the student counseling center (by appointment), and the computing lab (open 9am–6pm). Want contact details for any?\"\n",
+        "        ]\n",
+        "    },\n",
+        "    \"fallback\": {\n",
+        "        \"patterns\": [r\".*\"],\n",
+        "        \"responses\": [\n",
+        "            \"I'm sorry, I didn't quite get that. Could you rephrase? You can ask about deadlines, syllabus, prerequisites, office hours, or campus resources.\",\n",
+        "            \"Hmm — I don't have an answer for that yet. Try asking something like 'When is the next assignment due?' or 'What topics are in week 3?'\"\n",
+        "        ]\n",
+        "    }\n",
+        "}"
+      ],
+      "metadata": {
+        "id": "2AnLNvKVZsif"
+      },
+      "execution_count": 2,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "def preprocess_text(text: str) -> str:\n",
+        "    \"\"\"Lowercase and trim punctuation for simple matching.\"\"\"\n",
+        "    text = text.lower().strip()\n",
+        "    return text\n",
+        "\n",
+        "def match_intent(text: str):\n",
+        "    \"\"\"Return the best matching intent key, or 'fallback'.\"\"\"\n",
+        "    text_p = preprocess_text(text)\n",
+        "    # Check specific intents first (order matters for specificity)\n",
+        "    for intent, data in INTENTS.items():\n",
+        "        if intent == \"assignment_deadline\":\n",
+        "            # handle assignment_deadline specially below\n",
+        "            continue\n",
+        "        patterns = data.get(\"patterns\", [])\n",
+        "        for pat in patterns:\n",
+        "            if re.search(pat, text_p):\n",
+        "                return intent\n",
+        "    # assignment_deadline - check for 'assignment' or 'due' words\n",
+        "    if re.search(r\"\\b(assignment|homework|task)\\b\", text_p) and re.search(r\"\\b(due|deadline|when)\\b\", text_p):\n",
+        "        return \"assignment_deadline\"\n",
+        "    # fallback\n",
+        "    return \"fallback\"\n",
+        "\n",
+        "# Simple dynamic deadline example data (in a real bot you'd query a DB)\n",
+        "NEXT_ASSIGNMENT = {\n",
+        "    \"title\": \"Assignment 3: Data preprocessing\",\n",
+        "    \"due\": datetime.now().date() + timedelta(days=6),  # 6 days from now\n",
+        "    \"notes\": \"Submit on the LMS before 11:59 PM. Late submissions lose 10% per day.\"\n",
+        "}\n",
+        "\n",
+        "def format_deadline_response():\n",
+        "    due_date = NEXT_ASSIGNMENT[\"due\"]\n",
+        "    days_left = (due_date - datetime.now().date()).days\n",
+        "    if days_left < 0:\n",
+        "        info = f\"The deadline for {NEXT_ASSIGNMENT['title']} was {due_date.strftime('%b %d, %Y')} (already passed). {NEXT_ASSIGNMENT['notes']}\"\n",
+        "    elif days_left == 0:\n",
+        "        info = f\"{NEXT_ASSIGNMENT['title']} is due today ({due_date.strftime('%b %d, %Y')}). {NEXT_ASSIGNMENT['notes']}\"\n",
+        "    else:\n",
+        "        info = f\"{NEXT_ASSIGNMENT['title']} is due on {due_date.strftime('%b %d, %Y')} — that's in {days_left} day(s). {NEXT_ASSIGNMENT['notes']}\"\n",
+        "    return info\n",
+        "\n",
+        "def get_response(user_text: str) -> str:\n",
+        "    intent = match_intent(user_text)\n",
+        "    if intent == \"assignment_deadline\":\n",
+        "        return format_deadline_response()\n",
+        "    responses = INTENTS.get(intent, INTENTS[\"fallback\"])[\"responses\"]\n",
+        "    return random.choice(responses)"
+      ],
+      "metadata": {
+        "id": "E1djS0T9Z1at"
+      },
+      "execution_count": 3,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "def chat_loop():\n",
+        "    print(\"Course Assistant Bot (type 'help' for capabilities, 'exit' to quit)\\n\")\n",
+        "    while True:\n",
+        "        try:\n",
+        "            user = input(\"You: \").strip()\n",
+        "        except (EOFError, KeyboardInterrupt):\n",
+        "            print(\"\\nExiting. Goodbye!\")\n",
+        "            break\n",
+        "        if not user:\n",
+        "            print(\"Bot: Please type a message or 'help' to see options.\")\n",
+        "            continue\n",
+        "        if re.search(r\"\\b(exit|quit|bye|goodbye)\\b\", user.lower()):\n",
+        "            print(\"Bot:\", random.choice(INTENTS[\"goodbye\"][\"responses\"]))\n",
+        "            break\n",
+        "        resp = get_response(user)\n",
+        "        print(\"Bot:\", resp)"
+      ],
+      "metadata": {
+        "id": "tDHkyKiDarDf"
+      },
+      "execution_count": 4,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "def run_tests():\n",
+        "    tests = [\n",
+        "        \"Hi, hello!\",\n",
+        "        \"When is the next assignment due?\",\n",
+        "        \"What topics are in the syllabus?\",\n",
+        "        \"Do you have office hours for the professor?\",\n",
+        "        \"What prerequisites do I need?\",\n",
+        "        \"Tell me about the campus library\",\n",
+        "        \"I want help\",\n",
+        "        \"Bye\"\n",
+        "    ]\n",
+        "    print(\"Running test queries...\\n\")\n",
+        "    for t in tests:\n",
+        "        print(\"Q:\", t)\n",
+        "        print(\"A:\", get_response(t))\n",
+        "        print(\"-\" * 40)"
+      ],
+      "metadata": {
+        "id": "D2LVkLbnaxHg"
+      },
+      "execution_count": 5,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "if __name__ == \"__main__\":\n",
+        "    # run_tests()   # uncomment to see canned tests\n",
+        "    chat_loop()"
+      ],
+      "metadata": {
+        "id": "RWqAJaRJa7UW"
+      },
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
